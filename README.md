@@ -14,34 +14,6 @@ The Kubernetes Resource Injector is a tool designed to enforce best practices by
 
 ---
 
-## **Directory Structure**
-
-```plaintext
-k8s-resource-injector/
-├── app/
-│   ├── __init__.py          # Package initialization
-│   ├── main.py              # Main application logic
-│   ├── requirements.txt     # Python dependencies
-│   ├── utils.py             # Utility functions (optional)
-│   └── config.py            # Configuration management (optional)
-├── Dockerfile               # Docker instructions to build the image
-├── .dockerignore            # Exclude unnecessary files from the image
-├── .gitignore               # Files and folders to ignore in Git
-├── manifests/
-│   ├── configmap.yaml       # ConfigMap for resource values
-│   ├── deployment.yaml      # Deployment definition
-│   ├── namespace.yaml       # Namespace definition (optional)
-│   ├── serviceaccount.yaml  # ServiceAccount for RBAC
-│   └── rolebinding.yaml     # RoleBinding for permissions
-├── README.md                # Project documentation
-├── tests/
-│   ├── test_main.py         # Unit tests for main.py
-│   ├── test_utils.py        # Unit tests for utility functions
-│   └── __init__.py          # Package initialization for tests
-```
-
----
-
 ## **Getting Started**
 
 ### **Prerequisites**
