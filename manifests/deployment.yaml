@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resource-injector
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: resource-injector
+  template:
+    metadata:
+      labels:
+        app: resource-injector
+    spec:
+      serviceAccountName: resource-injector-service-account
+      containers:
+        - name: injector
+          imagePullPolicy: Always
+          image: berkois/k8s-resource-controller:latest
+          envFrom:
+            - configMapRef:
+                name: resource-config
