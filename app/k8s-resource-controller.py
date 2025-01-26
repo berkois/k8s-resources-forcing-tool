@@ -87,7 +87,7 @@ def patch_resource_limits(namespace, name, kind):
                 response = api.patch_namespaced_pod(name, namespace, patch_body)
 
             logging.info(
-                f"Successfully applied updates to {kind} '{name}' in namespace '{namespace}'. Server response: {response}"
+                f"Successfully applied updates to {kind} '{name}' in namespace '{namespace}'."
             )
             log_resource_limits(namespace, name, kind)
         else:
