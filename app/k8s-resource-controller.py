@@ -39,34 +39,52 @@ def patch_resource_limits(namespace, name, kind):
         api = client.AppsV1Api() if kind == "Deployment" else client.CoreV1Api()
         spec = api.read_namespaced_deployment(name, namespace).spec if kind == "Deployment" else api.read_namespaced_pod(name, namespace).spec
 
-        modified = False
-        for container in spec.template.spec.containers if kind == "Deployment" else spec.containers:
+        resource = (api.read_namespaced_deployment(name, namespace) if kind == "Deployment"
+                    else api.read_namespaced_pod(name, namespace))
+        containers = (resource.spec.template.spec.containers if kind == "Deployment"
+                      else resource.spec.containers)
+
+        modified_containers = []
+        for container in containers:
+            container_patch = {"name": container.name, "image": container.image}
             if not container.resources.requests:
                 logging.info(f"Missing requests for container '{container.name}' in {kind} '{name}' in namespace '{namespace}'. Adding defaults: CPU='{DEFAULT_CPU_REQUEST}', Memory='{DEFAULT_MEMORY_REQUEST}'.")
                 logging.info(f"Current Resources.requests: {container.resources.requests}")
 
-                container.resources.requests = {
+                container_patch["resources"] = container_patch.get("resources", {})
+                container_patch["resources"]["requests"] = {
                     "cpu": DEFAULT_CPU_REQUEST,
                     "memory": DEFAULT_MEMORY_REQUEST,
                 }
-                logging.info(f"Applying new resources.requests: {container.resources.requests}")
-                modified = True
+                logging.info(f"Setting default requests for container '{container.name}' in {kind} '{name}': {container_patch['resources']['requests']}")
 
             if not container.resources.limits:
                 logging.info(f"Missing limits for container '{container.name}' in {kind} '{name}' in namespace '{namespace}'. Adding defaults: CPU='{DEFAULT_CPU_REQUEST}', Memory='{DEFAULT_MEMORY_REQUEST}'.")
                 logging.info(f"Current Resources.limits: {container.resources.limits}")
-                container.resources.limits = {
+                container_patch["resources"] = container_patch.get("resources", {})
+                container_patch["resources"]["limits"] = {
                     "cpu": DEFAULT_CPU_LIMIT,
                     "memory": DEFAULT_MEMORY_LIMIT,
                 }
-                logging.info(f"Applying new resources.limits: {container.resources.limits}")
-                modified = True
+                logging.info(f"Setting default limits for container '{container.name}' in {kind} '{name}': {container_patch['resources']['limits']}")
 
-        if modified:
+            if "resources" in container_patch:
+                modified_containers.append(container_patch)
+
+        if modified_containers:
+            patch_body = {
+                "spec": {
+                    "template": {
+                        "spec": {
+                            "containers": modified_containers
+                        }
+                    }
+                }
+            }
             if kind == "Deployment":
-                response = api.patch_namespaced_deployment(name, namespace, kind)
+                response = api.patch_namespaced_deployment(name, namespace, patch_body)
             else:
-                response = api.patch_namespaced_pod(name, namespace, kind)
+                response = api.patch_namespaced_pod(name, namespace, patch_body)
 
             logging.info(
                 f"Successfully applied updates to {kind} '{name}' in namespace '{namespace}'. Server response: {response}"
