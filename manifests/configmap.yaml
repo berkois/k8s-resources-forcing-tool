@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: resource-config
+  namespace: kube-system
+data:
+  DEFAULT_CPU_REQUEST: "1000m"
+  DEFAULT_MEMORY_REQUEST: "1Gi"
+  DEFAULT_CPU_LIMIT: "2000m"
+  DEFAULT_MEMORY_LIMIT: "2Gi"
