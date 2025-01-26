@@ -25,15 +25,7 @@ The Kubernetes Resource Injector is a tool designed to enforce best practices by
 
 ### **Setup Instructions**
 
-#### **1. Download the Prebuilt Docker Image**
-
-The tool's Docker image is prebuilt and available on Docker Hub. Pull the latest version:
-
-```bash
-docker pull berkois/k8s-resource-controller:latest
-```
-
-#### **2. Configure the Kubernetes Manifests**
+#### **1. Configure the Kubernetes Manifests**
 
 - Modify `manifests/configmap.yaml` to set default resource values:
 
@@ -50,7 +42,7 @@ data:
 ```yaml
 containers:
   - name: resource-injector
-    image: berkois/k8s-resource-controller:latest
+    image: berkois/k8s-resource-controller:<desired-tag>
 ```
 
 #### **3. Apply the Kubernetes Manifests**
