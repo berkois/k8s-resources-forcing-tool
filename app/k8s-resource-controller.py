@@ -28,11 +28,17 @@ def log_resource_limits(namespace, name, kind):
             limits = container.resources.limits or {}
             logging.info(
                 f"{kind} '{name}' in namespace '{namespace}' - "
-                f"Container '{container.name}': Requests: {requests}, Limits: {limits}"
+                f"Container '{container.name}': "
+                f"Requests: CPU={requests.get('cpu', 'None')}, Memory={requests.get('memory', 'None')}; "
+                f"Limits: CPU={limits.get('cpu', 'None')}, Memory={limits.get('memory', 'None')}"
             )
 
     except ApiException as e:
         logging.error(f"Error fetching updated {kind} '{name}' in namespace '{namespace}': {e.reason}, {e.body}")
+    except Exception as e:
+        logging.error(
+            f"Unexpected error while logging resource limits for {kind} '{name}' in namespace '{namespace}': {str(e)}"
+        )
 
 def patch_resource_limits(namespace, name, kind):
     try:
@@ -48,9 +54,10 @@ def patch_resource_limits(namespace, name, kind):
         for container in containers:
             container_patch = {"name": container.name, "image": container.image}
             if not container.resources.requests:
-                logging.info(f"Missing requests for container '{container.name}' in {kind} '{name}' in namespace '{namespace}'. Adding defaults: CPU='{DEFAULT_CPU_REQUEST}', Memory='{DEFAULT_MEMORY_REQUEST}'.")
-                logging.info(f"Current Resources.requests: {container.resources.requests}")
-
+                logging.info(f"Current settings for container '{container.name}' in {kind} '{name}':")
+                logging.info(f"  Requests: {container.resources.requests}")
+                logging.info(f"  Limits: {container.resources.limits}")
+                logging.info(f"Adding defaults for container '{container.name}' in {kind} '{name}' in namespace '{namespace}': CPU='{DEFAULT_CPU_REQUEST}', Memory='{DEFAULT_MEMORY_REQUEST}'.")
                 container_patch["resources"] = container_patch.get("resources", {})
                 container_patch["resources"]["requests"] = {
                     "cpu": DEFAULT_CPU_REQUEST,
@@ -59,8 +66,7 @@ def patch_resource_limits(namespace, name, kind):
                 logging.info(f"Setting default requests for container '{container.name}' in {kind} '{name}': {container_patch['resources']['requests']}")
 
             if not container.resources.limits:
-                logging.info(f"Missing limits for container '{container.name}' in {kind} '{name}' in namespace '{namespace}'. Adding defaults: CPU='{DEFAULT_CPU_REQUEST}', Memory='{DEFAULT_MEMORY_REQUEST}'.")
-                logging.info(f"Current Resources.limits: {container.resources.limits}")
+                logging.info(f"Adding defaults for container '{container.name}' in {kind} '{name}' in namespace '{namespace}': CPU='{DEFAULT_CPU_LIMIT}', Memory='{DEFAULT_MEMORY_LIMIT}'.")
                 container_patch["resources"] = container_patch.get("resources", {})
                 container_patch["resources"]["limits"] = {
                     "cpu": DEFAULT_CPU_LIMIT,
@@ -82,14 +88,19 @@ def patch_resource_limits(namespace, name, kind):
                 }
             }
             if kind == "Deployment":
-                response = api.patch_namespaced_deployment(name, namespace, patch_body)
+                api.patch_namespaced_deployment(name, namespace, patch_body)
             else:
-                response = api.patch_namespaced_pod(name, namespace, patch_body)
+                api.patch_namespaced_pod(name, namespace, patch_body)
 
-            logging.info(
-                f"Successfully applied updates to {kind} '{name}' in namespace '{namespace}'."
-            )
-            log_resource_limits(namespace, name, kind)
+            updated_resource = (api.read_namespaced_deployment(name, namespace) if kind == "Deployment"
+                                else api.read_namespaced_pod(name, namespace))
+            updated_containers = (updated_resource.spec.template.spec.containers if kind == "Deployment"
+                                  else updated_resource.spec.containers)
+
+            for updated_container in updated_containers:
+                logging.info(f"Updated container '{updated_container.name}' in {kind} '{name}':")
+                logging.info(f"  Requests: {updated_container.resources.requests}")
+                logging.info(f"  Limits: {updated_container.resources.limits}")
         else:
             logging.info(f"No changes needed for {kind} '{name}' in namespace '{namespace}'.")
 
